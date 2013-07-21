@@ -11,6 +11,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#define ACCEPT_BUFQ 20
+
 struct addrinfo* prepare_addrinfo(char *host, char *port)
 {
     int status;
@@ -39,7 +41,7 @@ int get_socket(struct addrinfo *res)
     return s;
 }
 
-int get_port(struct addrinfo *res, char *ip)
+int get_port_and_ip(struct addrinfo *res, char *ip)
 {
     void *addr;
     unsigned short int port;
@@ -63,7 +65,7 @@ int bind_socket(struct addrinfo *res)
     sfd = get_socket(res);
     if (sfd != -1) {
         b = bind(sfd, res->ai_addr, res->ai_addrlen);
-        port = get_port(res, ip);
+        port = get_port_and_ip(res, ip);
         if (b != 0) {
             fprintf(stderr, "ERROR: bind to port %d on %s failed: ", port, ip);
             perror(NULL);
@@ -77,32 +79,53 @@ int bind_socket(struct addrinfo *res)
     return sfd;
 }
 
+int listen_on_port(char *port)
+{
+    int sfd;
+    struct addrinfo *res;
+
+    res = prepare_addrinfo(NULL, port);
+    sfd = bind_socket(res);
+    freeaddrinfo(res);
+    if (sfd != -1) {
+        if (listen(sfd, ACCEPT_BUFQ) == -1) {
+            fprintf(stderr, "ERROR: listen to port %s failed: ", port);
+            close(sfd);
+            sfd = -1;
+        }
+    }
+    return sfd;
+}
+
+int accept_connection(int sfd)
+{
+    int rfd;
+    socklen_t addr_size;
+    struct sockaddr_storage remote_addr;
+
+    addr_size = sizeof(struct sockaddr_storage);
+    rfd = accept(sfd, (struct sockaddr*)&remote_addr, &addr_size);
+    return rfd;
+}
+
 int main(int argc, char *argv[])
 {
     int sfd, rfd, received, sent;
-    struct addrinfo *res;
-    struct sockaddr_storage remote_addr;
-    socklen_t addr_size;
     char buf[2048];
 
-    res = prepare_addrinfo(argv[1], argv[2]);
-    printf("%p\n", res);
-    sfd = bind_socket(res);
-    freeaddrinfo(res);
-    printf("%d\n", sfd);
-    listen(sfd, 1);
-    addr_size = sizeof(struct sockaddr_storage);
-    rfd = accept(sfd, (struct sockaddr*)&remote_addr, &addr_size);
+    sfd = listen_on_port(argv[1]);
     if (sfd != -1) {
-        close(sfd);
+        rfd = accept_connection(sfd);
+        if (rfd != -1) {
+            received = recv(rfd, buf, sizeof(buf), 0);
+            printf("recieved %d bytes\n", received);
+            sent = send(rfd, buf, received, 0);
+            printf("sent %d bytes\n", sent);
+            close(rfd);
+            close(sfd);
+        }
     }
-    if (rfd != -1) {
-        received = recv(rfd, buf, sizeof(buf), 0);
-        printf("recieved %d bytes\n", received);
-        sent = send(rfd, buf, received, 0);
-        printf("sent %d bytes\n", sent);
-        close(rfd);
-    }
+
 
     return 0;
 }

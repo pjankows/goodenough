@@ -14,8 +14,8 @@ clean:
 	rm -f $(exe_name) goodenough.o
 
 vg: all
-	valgrind $(vg_opts) ./$(exe_name) 127.0.0.1 9090
+	valgrind $(vg_opts) ./$(exe_name) 9090
 
 err: all
-	valgrind $(vg_opts) ./$(exe_name) 127.0.0.1 80
+	valgrind $(vg_opts) ./$(exe_name) 80
 
