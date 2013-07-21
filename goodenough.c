@@ -12,6 +12,8 @@
 #include <netinet/in.h>
 
 #define ACCEPT_BUFQ 20
+#define REQ_BUF 4096
+#define RESP_BUF 4096
 
 struct addrinfo* prepare_addrinfo(char *host, char *port)
 {
@@ -59,70 +61,102 @@ int get_port_and_ip(struct addrinfo *res, char *ip)
 
 int bind_socket(struct addrinfo *res)
 {
-    int sfd, b;
+    int socketfd, b;
     int port;
     char ip[INET6_ADDRSTRLEN];
-    sfd = get_socket(res);
-    if (sfd != -1) {
-        b = bind(sfd, res->ai_addr, res->ai_addrlen);
+    socketfd = get_socket(res);
+    if (socketfd != -1) {
+        b = bind(socketfd, res->ai_addr, res->ai_addrlen);
         port = get_port_and_ip(res, ip);
         if (b != 0) {
             fprintf(stderr, "ERROR: bind to port %d on %s failed: ", port, ip);
             perror(NULL);
-            close(sfd);
-            sfd = -1;
+            close(socketfd);
+            socketfd = -1;
         }
         else {
             printf("bind to port %d on %s OK\n", port, ip);
         }
     }
-    return sfd;
+    return socketfd;
 }
 
 int listen_on_port(char *port)
 {
-    int sfd;
+    int socketfd;
     struct addrinfo *res;
 
     res = prepare_addrinfo(NULL, port);
-    sfd = bind_socket(res);
+    socketfd = bind_socket(res);
     freeaddrinfo(res);
-    if (sfd != -1) {
-        if (listen(sfd, ACCEPT_BUFQ) == -1) {
+    if (socketfd != -1) {
+        if (listen(socketfd, ACCEPT_BUFQ) == -1) {
             fprintf(stderr, "ERROR: listen to port %s failed: ", port);
-            close(sfd);
-            sfd = -1;
+            close(socketfd);
+            socketfd = -1;
         }
     }
-    return sfd;
+    return socketfd;
 }
 
-int accept_connection(int sfd)
+int accept_connection(int socketfd)
 {
-    int rfd;
+    int remotefd;
     socklen_t addr_size;
     struct sockaddr_storage remote_addr;
 
     addr_size = sizeof(struct sockaddr_storage);
-    rfd = accept(sfd, (struct sockaddr*)&remote_addr, &addr_size);
-    return rfd;
+    remotefd = accept(socketfd, (struct sockaddr*)&remote_addr, &addr_size);
+    return remotefd;
+}
+
+int connect_to(char *host, char *port)
+{
+    int socketfd;
+    struct addrinfo *res;
+
+    res = prepare_addrinfo(host, port);
+    socketfd = get_socket(res);
+    if (socketfd != -1) {
+        if (connect(socketfd, res->ai_addr, res->ai_addrlen) == -1) {
+            fprintf(stderr, "ERROR: connect %s:%s failed: ", host, port);
+            perror(NULL);
+            close(socketfd);
+            socketfd = -1;
+        }
+    }
+    freeaddrinfo(res);
+    return socketfd;
 }
 
 int main(int argc, char *argv[])
 {
-    int sfd, rfd, received, sent;
-    char buf[2048];
+    int socketfd, remotefd, targetfd;
+    int received, sent;
+    int target_sent, target_received;
+    char req[REQ_BUF], resp[RESP_BUF];
 
-    sfd = listen_on_port(argv[1]);
-    if (sfd != -1) {
-        rfd = accept_connection(sfd);
-        if (rfd != -1) {
-            received = recv(rfd, buf, sizeof(buf), 0);
-            printf("recieved %d bytes\n", received);
-            sent = send(rfd, buf, received, 0);
+    socketfd = listen_on_port(argv[1]);
+    if (socketfd != -1) {
+        remotefd = accept_connection(socketfd);
+        if (remotefd != -1) {
+            received = recv(remotefd, req, sizeof(req), 0);
+            printf("received %d bytes\n", received);
+
+            targetfd = connect_to(argv[2], argv[3]);
+            if (targetfd != -1) {
+                target_sent = send(targetfd, req, received, 0);
+                printf("sent %d bytes to target\n", target_sent);
+                target_received = recv(targetfd, resp, sizeof(resp), 0);
+                printf("got %d bytes from target\n", target_received);
+            }
+            else {
+                perror("ERROR: unable to connect to target");
+            }
+            sent = send(remotefd, resp, target_received, 0);
             printf("sent %d bytes\n", sent);
-            close(rfd);
-            close(sfd);
+            close(remotefd);
+            close(socketfd);
         }
     }
 
