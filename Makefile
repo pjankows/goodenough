@@ -6,12 +6,12 @@ else
 debug :=
 endif
 
-all: gdeh.c
-	gcc -Wall $(debug) -o $(exe_name) gdeh.c
+all: goodenough.c
+	gcc -Wall $(debug) -o $(exe_name) goodenough.c
 
 clean:
-	rm -f $(exe_name) gdeh.o
+	rm -f $(exe_name) goodenough.o
 
 vg: all
-	valgrind --leak-check=full ./$(exe_name) 127.0.0.1
+	valgrind --leak-check=full ./$(exe_name) 127.0.0.1 9090
 
