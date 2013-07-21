@@ -79,7 +79,7 @@ int bind_socket(struct addrinfo *res)
 
 int main(int argc, char *argv[])
 {
-    int sfd, rfd, received;
+    int sfd, rfd, received, sent;
     struct addrinfo *res;
     struct sockaddr_storage remote_addr;
     socklen_t addr_size;
@@ -99,6 +99,8 @@ int main(int argc, char *argv[])
     if (rfd != -1) {
         received = recv(rfd, buf, sizeof(buf), 0);
         printf("recieved %d bytes\n", received);
+        sent = send(rfd, buf, received, 0);
+        printf("sent %d bytes\n", sent);
         close(rfd);
     }
 
