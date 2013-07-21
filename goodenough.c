@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 {
     int sfd, rfd;
     struct addrinfo *res;
-    struct sockaddr_storage *remote_addr;
+    struct sockaddr_storage remote_addr;
     socklen_t addr_size;
 
     res = prepare_addrinfo(argv[1], argv[2]);
@@ -91,10 +91,8 @@ int main(int argc, char *argv[])
     printf("%d\n", sfd);
     listen(sfd, 1);
     addr_size = sizeof(struct sockaddr_storage);
-    remote_addr = malloc(addr_size);
-    rfd = accept(sfd, (struct sockaddr*)remote_addr, &addr_size);
+    rfd = accept(sfd, (struct sockaddr*)&remote_addr, &addr_size);
     close(sfd);
     close(rfd);
-    free(remote_addr);
     return 0;
 }
