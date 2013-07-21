@@ -19,6 +19,9 @@ struct addrinfo* prepare_addrinfo(char *host, char *port)
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
+    if (host == NULL) {
+        hints.ai_flags = AI_PASSIVE;
+    }
     status = getaddrinfo(host, port, &hints, &res);
     if (status != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
@@ -87,6 +90,8 @@ int main(int argc, char *argv[])
     freeaddrinfo(res);
     printf("%d\n", sfd);
     listen(sfd, 1);
-    rfd = accept(sfd, (struct sockaddr*)&remote_addr, &addr_size);
+    rfd = accept(sfd, (struct sockaddr*)(&remote_addr), &addr_size);
+    close(sfd);
+    close(rfd);
     return 0;
 }

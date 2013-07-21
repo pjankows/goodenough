@@ -1,4 +1,5 @@
 exe_name := gdeh
+vg_opts := --leak-check=full --track-origins=yes
 
 ifdef DEBUG
 debug := -g
@@ -13,8 +14,8 @@ clean:
 	rm -f $(exe_name) goodenough.o
 
 vg: all
-	valgrind --leak-check=full ./$(exe_name) 127.0.0.1 9090
+	valgrind $(vg_opts) ./$(exe_name) 127.0.0.1 9090
 
 err: all
-	valgrind --leak-check=full ./$(exe_name) 127.0.0.1 80
+	valgrind $(vg_opts) ./$(exe_name) 127.0.0.1 80
 
