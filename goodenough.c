@@ -60,12 +60,15 @@ int bind_socket(struct addrinfo *res)
     sfd = get_socket(res);
     if (sfd != -1) {
         b = bind(sfd, res->ai_addr, res->ai_addrlen);
-        if (b == -1) {
-            port = get_port(res, ip);
-            fprintf(stderr, "bind to port %d on %s failed: ", port, ip);
+        port = get_port(res, ip);
+        if (b != 0) {
+            fprintf(stderr, "ERROR: bind to port %d on %s failed: ", port, ip);
             perror(NULL);
             close(sfd);
             sfd = -1;
+        }
+        else {
+            printf("bind to port %d on %s OK\n", port, ip);
         }
     }
     return sfd;
@@ -73,12 +76,17 @@ int bind_socket(struct addrinfo *res)
 
 int main(int argc, char *argv[])
 {
-    int s;
+    int sfd, rfd;
     struct addrinfo *res;
+    struct sockaddr_storage remote_addr;
+    socklen_t addr_size;
+
     res = prepare_addrinfo(argv[1], argv[2]);
     printf("%p\n", res);
-    s = bind_socket(res);
-    printf("%d\n", s);
+    sfd = bind_socket(res);
     freeaddrinfo(res);
+    printf("%d\n", sfd);
+    listen(sfd, 1);
+    rfd = accept(sfd, (struct sockaddr*)&remote_addr, &addr_size);
     return 0;
 }
