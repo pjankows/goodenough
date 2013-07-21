@@ -15,3 +15,6 @@ clean:
 vg: all
 	valgrind --leak-check=full ./$(exe_name) 127.0.0.1 9090
 
+err: all
+	valgrind --leak-check=full ./$(exe_name) 127.0.0.1 80
+
