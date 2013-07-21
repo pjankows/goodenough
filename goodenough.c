@@ -79,10 +79,11 @@ int bind_socket(struct addrinfo *res)
 
 int main(int argc, char *argv[])
 {
-    int sfd, rfd;
+    int sfd, rfd, received;
     struct addrinfo *res;
     struct sockaddr_storage remote_addr;
     socklen_t addr_size;
+    char buf[2048];
 
     res = prepare_addrinfo(argv[1], argv[2]);
     printf("%p\n", res);
@@ -92,7 +93,14 @@ int main(int argc, char *argv[])
     listen(sfd, 1);
     addr_size = sizeof(struct sockaddr_storage);
     rfd = accept(sfd, (struct sockaddr*)&remote_addr, &addr_size);
-    close(sfd);
-    close(rfd);
+    if (sfd != -1) {
+        close(sfd);
+    }
+    if (rfd != -1) {
+        received = recv(rfd, buf, sizeof(buf), 0);
+        printf("recieved %d bytes\n", received);
+        close(rfd);
+    }
+
     return 0;
 }
