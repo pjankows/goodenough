@@ -36,32 +36,39 @@ int get_socket(struct addrinfo *res)
     return s;
 }
 
-int get_port(struct addrinfo *res)
+int get_port(struct addrinfo *res, char *ip)
 {
+    void *addr;
     unsigned short int port;
     if (res->ai_family == AF_INET) {
         port = ((struct sockaddr_in*)res->ai_addr)->sin_port;
+        addr = &((struct sockaddr_in*)res->ai_addr)->sin_addr;
     }
     else {
         port = ((struct sockaddr_in6*)res->ai_addr)->sin6_port;
+        addr = &((struct sockaddr_in6*)res->ai_addr)->sin6_addr;
     }
+    inet_ntop(res->ai_family, addr, ip, INET6_ADDRSTRLEN);
     return ntohs(port);
 }
 
 int bind_socket(struct addrinfo *res)
 {
-    int s, b;
-    s = get_socket(res);
-    if (s != -1) {
-        b = bind(s, res->ai_addr, res->ai_addrlen);
+    int sfd, b;
+    unsigned short int port;
+    char ip[INET6_ADDRSTRLEN];
+    sfd = get_socket(res);
+    if (sfd != -1) {
+        b = bind(sfd, res->ai_addr, res->ai_addrlen);
         if (b == -1) {
-            fprintf(stderr, "bind to port %d failed: ", get_port(res));
+            port = get_port(res, ip);
+            fprintf(stderr, "bind to port %d on %s failed: ", port, ip);
             perror(NULL);
-            close(s);
-            s = -1;
+            close(sfd);
+            sfd = -1;
         }
     }
-    return s;
+    return sfd;
 }
 
 int main(int argc, char *argv[])
